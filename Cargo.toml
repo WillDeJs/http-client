@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 http-parse={git="https://github.com/WillDeJs/http-parse"}
-rustls = { version = "0.23.16", default-features = false, features = ["tls12", "std", "log"] }
+rustls = { version = "0.23.16", default-features = false, features = ["tls12", "std", "ring"] }
 webpki-roots = "0.26.6"
