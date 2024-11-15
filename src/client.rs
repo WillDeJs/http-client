@@ -9,6 +9,8 @@ use std::{fmt::Display, io::Write, net::TcpStream};
 
 use crate::config::Config;
 use crate::error::HttpError;
+use crate::json::parser::JsonParser;
+use crate::json::{JsonObj, JsonValue};
 
 const LIB_USER_AGENT: &str = "HTTP Lib / 0.1.0 WD Client";
 const MAX_BLOCK_SIZE: usize = 1_000_000;
@@ -133,6 +135,15 @@ impl ClientRequest<Body> {
         }
         self
     }
+
+    /// Add a JSON payload to this request.
+    ///
+    /// # Arguments
+    /// `json`  the JSON object being added to the request's body.
+    pub fn json_body(mut self, json: &JsonObj) -> Self {
+        self.inner.add_data(json.to_string().as_bytes());
+        self
+    }
 }
 impl<T> ClientRequest<T> {
     /// Create a new ClientRequest
@@ -202,6 +213,24 @@ impl<T> ClientRequest<T> {
                 }
             },
             Err(e) => Err(e),
+        }
+    }
+
+    /// Creates a JSON object from the payload of the response.
+    ///
+    /// # Errors
+    /// On connection errors, or when the data cannot be parse properly
+    pub fn json_response(self) -> Result<JsonValue, HttpError> {
+        let res = Self::send_request(self.secure, &self.url, &self.inner)?;
+        if res.status_code() != StatusCode::OK {
+            Err(HttpError::BadResponse(
+                res.status_code(),
+                res.status_msg().to_owned(),
+            ))
+        } else {
+            let json = JsonParser::parse_json(&String::from_utf8_lossy(res.data()))
+                .map_err(|e| HttpError::ParseError(e))?;
+            Ok(json)
         }
     }
 

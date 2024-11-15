@@ -32,4 +32,7 @@ mod config;
 #[allow(dead_code)]
 pub mod error;
 
+#[allow(dead_code)]
+pub mod json;
+
 pub use http_parse::*;
