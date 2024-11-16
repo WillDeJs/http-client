@@ -103,7 +103,8 @@ impl JsonParser {
     where
         I: Iterator<Item = char>,
     {
-        let boolean_data = data.take(4).collect::<String>();
+        let length = if data.peek() == Some(&'f') { 5 } else { 4 };
+        let boolean_data = data.take(length).collect::<String>();
         let boolean_value: bool = boolean_data
             .parse()
             .map_err(|e: ParseBoolError| e.to_string())?;

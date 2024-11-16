@@ -147,17 +147,17 @@ impl Display for JsonValue {
             JsonValue::String(v) => write!(f, "\"{}\"", v),
             JsonValue::Array(vec) => {
                 write!(f, "[")?;
-                for i in 0..vec.len() - 1 {
+                for i in 0..vec.len().saturating_sub(1) {
                     write!(f, "{},", vec[i])?;
                 }
                 if vec.len() > 1 {
-                    write!(f, "{}", vec[vec.len() - 1])?;
+                    write!(f, "{}", vec[vec.len().saturating_sub(1)])?;
                 }
                 write!(f, "]")
             }
             JsonValue::Object(hash_map) => {
                 write!(f, "{}", "{")?;
-                let last = hash_map.inner.len() - 1;
+                let last = hash_map.inner.len().saturating_sub(1);
                 for (index, (key, value)) in hash_map.inner.iter().enumerate() {
                     write!(f, "\"{}\": {}", key, value)?;
                     if index < last {
