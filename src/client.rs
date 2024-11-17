@@ -104,6 +104,7 @@ pub(crate) enum SecurityType {
 
 pub(crate) enum FileSize {
     Sized(usize),
+    NotReported,
     Chunked,
 }
 
@@ -189,6 +190,10 @@ impl<T> ClientRequest<T> {
                     Ok(cursor.into_inner())
                 }
                 FileSize::Chunked => self.download_chunked(),
+                FileSize::NotReported => {
+                    let res = self.send()?;
+                    Ok(res.data().to_owned())
+                }
             },
             Err(e) => Err(e),
         }
@@ -210,6 +215,18 @@ impl<T> ClientRequest<T> {
                 FileSize::Chunked => {
                     writer.write_all(&self.download_chunked()?)?;
                     Ok(())
+                }
+                FileSize::NotReported => {
+                    let res = self.send()?;
+                    if res.status_code() != StatusCode::OK {
+                        writer.write_all(res.data())?;
+                        Ok(())
+                    } else {
+                        Err(HttpError::BadResponse(
+                            res.status_code(),
+                            res.status_msg().to_owned(),
+                        ))
+                    }
                 }
             },
             Err(e) => Err(e),
@@ -252,8 +269,9 @@ impl<T> ClientRequest<T> {
             let mut end_byte = size;
             let mut total_read = 0;
             while total_read < size {
+                end_byte = min(size, end_byte + MAX_BLOCK_SIZE);
                 self.inner
-                    .put_header(H_RANGE, format!("bytes={start_byte}-{end_byte}/{size}"));
+                    .put_header(H_RANGE, format!("bytes={start_byte}-{end_byte}"));
                 let response = Self::send_request(self.secure, &self.url, &self.inner)?;
                 if response.status_code() != StatusCode::PARTIAL_CONTENT
                     && response.status_code() != StatusCode::OK
@@ -267,24 +285,28 @@ impl<T> ClientRequest<T> {
                 let header = response.header(H_CONTENT_RANGE);
                 match header {
                     Some(header) => {
-                        let tokens: Vec<usize> = header
-                            .value::<String>()
-                            .unwrap() // save to unwrap, a str can always turn into String
-                            .replace("bytes", "")
-                            .trim()
-                            .split(['-', '/'])
-                            .flat_map(|value| value.parse::<usize>())
-                            .collect();
-                        if tokens.len() < 3 {
-                            return Err(HttpError::BadResponse(
-                                response.status_code(),
-                                format!("Unsupported value for header`{}`", header),
-                            ));
+                        let range = header.value::<String>().unwrap(); // save to unwrap, a str can always turn into String
+                        if range.contains("*") {
+                            // Looks like we got all the bytes we needed
+                            result.write_all(response.data())?;
+                            break;
+                        } else {
+                            let tokens: Vec<usize> = range
+                                .replace("bytes", "")
+                                .trim()
+                                .split(['-', '/'])
+                                .flat_map(|value| value.parse::<usize>())
+                                .collect();
+                            if tokens.len() < 3 {
+                                return Err(HttpError::BadResponse(
+                                    response.status_code(),
+                                    format!("Unsupported value for header`{}`", header),
+                                ));
+                            }
+                            total_read += tokens[1] - tokens[0] + 1;
+                            start_byte = tokens[1] + 1;
+                            result.write_all(response.data())?;
                         }
-                        total_read += tokens[1] - tokens[0] + 1;
-                        start_byte = tokens[1] + 1;
-                        end_byte = min(size, end_byte + MAX_BLOCK_SIZE);
-                        result.write_all(response.data())?;
                     }
                     None => {
                         return Err(HttpError::BadResponse(
@@ -357,20 +379,19 @@ impl<T> ClientRequest<T> {
                 response.status_msg().to_owned(),
             ));
         }
+        let encoding_header = response.header(H_TRANSFER_ENCODING);
         if let Some(header) = response.header(H_CONTENT_LENGTH) {
             return Ok(FileSize::Sized(header.value::<usize>()?));
+        } else if encoding_header.is_some() {
+            if encoding_header
+                .unwrap()
+                .value::<String>()
+                .unwrap()
+                .contains("chunk")
+            {
+                return Ok(FileSize::Chunked);
+            }
         }
-        let header = response.header(H_TRANSFER_ENCODING);
-        if header.is_some() && header.unwrap().value::<String>().unwrap().contains("chunk") {
-            Ok(FileSize::Chunked)
-        } else {
-            Err(HttpError::BadResponse(
-                response.status_code(),
-                format!(
-                    "{}: Cannot determine resource size from headers.",
-                    response.status_msg()
-                ),
-            ))
-        }
+        Ok(FileSize::NotReported)
     }
 }
