@@ -18,6 +18,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "cpbar"
+version = "0.1.0"
+source = "git+https://github.com/WillDeJs/cpbar.git#b78c03253c98530a9a502b2435f234525fc8f112"
+
+[[package]]
 name = "getrandom"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -32,6 +37,7 @@ dependencies = [
 name = "http-client"
 version = "0.1.0"
 dependencies = [
+ "cpbar",
  "http-parse",
  "rustls",
  "webpki-roots",
@@ -40,7 +46,7 @@ dependencies = [
 [[package]]
 name = "http-parse"
 version = "0.1.0"
-source = "git+https://github.com/WillDeJs/http-parse#f77ad10970b5fb7813b8fbf8b56a343ce6adcecc"
+source = "git+https://github.com/WillDeJs/http-parse#65b1943833a26e17f2acade9f1aa1d2665e0f387"
 
 [[package]]
 name = "libc"

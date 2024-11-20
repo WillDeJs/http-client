@@ -5,5 +5,15 @@ edition = "2021"
 
 [dependencies]
 http-parse={git="https://github.com/WillDeJs/http-parse"}
+#http-parse = {path="../http-parse"}
+
 rustls = { version = "0.23.16", default-features = false, features = ["tls12", "std", "ring"] }
 webpki-roots = "0.26.6"
+
+
+[dev-dependencies]
+cpbar={git="https://github.com/WillDeJs/cpbar.git"}
+
+[[example]]
+name="download_stream"
+path="src/examples/download_stream.rs"
