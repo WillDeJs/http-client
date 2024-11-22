@@ -106,9 +106,9 @@ fn print_help() {
     println!("------");
     println!("download_stream.exe [--url=<url>|--local=<path>] --file=<file name>`");
     println!("------");
-    println!("* url:\t\tThe URL to the M3U8 file containing the playlist resources.");
+    println!("* url:  \tThe URL to the M3U8 file containing the playlist resources.");
     println!("* local:\tThe path to the local M3U8 file containing the playlist resources.");
-    println!("* file:\t\tOutput file name (name of the resource being streamed)");
+    println!("* file: \tOutput file name (name of the resource being streamed)");
     println!("\nNote: `--url` and `--local` options are mutually exclusive, if both are passed `--local` takes priority.\n")
 }
 fn main() -> Result<(), HttpError> {

@@ -57,7 +57,7 @@ impl Client {
 
     /// Creates a new POST request to the given URL
     pub fn post(&self, url: &str) -> Result<ClientRequest<Body>, HttpError> {
-        let url = HttpUrl::try_from(url).map_err(|e| HttpError::ParseError(e.to_string()))?;
+        let url = HttpUrl::try_from(url).map_err(|e| HttpError::Other(e.to_string()))?;
         Ok(ClientRequest::new(url, HttpMethod::Post))
     }
     /// Creates a new GET request to the given URL
@@ -246,7 +246,7 @@ impl<T> ClientRequest<T> {
             ))
         } else {
             let json = JsonParser::parse_json(&String::from_utf8_lossy(res.data()))
-                .map_err(|e| HttpError::ParseError(e))?;
+                .map_err(|e| HttpError::Other(e))?;
             Ok(json)
         }
     }
